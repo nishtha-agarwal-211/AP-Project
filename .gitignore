@@ -10,6 +10,7 @@ node_modules/
 # Prisma
 prisma/*.db
 prisma/*.db-journal
+generated/
 
 # Build files
 dist/

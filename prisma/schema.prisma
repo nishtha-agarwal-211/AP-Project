@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider   = "postgresql"
+}
+
+model Agent {
+  agentId     String   @id @default(uuid()) @map("agent_id")
+  modelName   String   @map("model_name")
+  temperature Float    @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  nodes ExecutionNode[]
+
+  @@map("agents")
+}
+
+model StateSnapshot {
+ stateHash       String   @id @map("state_hash") @db.Char(64)
+  memoryBlobJson  Json     @map("memory_blob_json")
+  embeddingVector Unsupported("vector(1536)")? @map("embedding_vector")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  nodes ExecutionNode[]
+
+  @@map("state_snapshots")
+}
+
+model ExecutionNode {
+  nodeId      String   @id @default(uuid()) @map("node_id")
+  agentId     String   @map("agent_id")
+  stateHash   String   @map("state_hash") @db.Char(64)
+  lamportTick Int      @map("lamport_tick")
+  promptInput String   @map("prompt_input")
+  llmOutput   String   @map("llm_output")
+  tokenCost   Decimal  @default(0) @map("token_cost") @db.Decimal(12, 6)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  agent    Agent         @relation(fields: [agentId], references: [agentId])
+  snapshot StateSnapshot @relation(fields: [stateHash], references: [stateHash])
+
+  @@index([stateHash])
+  @@map("execution_nodes") 
+}
