@@ -25,6 +25,8 @@ model StateSnapshot {
   createdAt       DateTime                     @default(now()) @map("created_at")
 
   nodes ExecutionNode[]
+  leftDiffs  StateDiff[] @relation("LeftState")
+  rightDiffs StateDiff[] @relation("RightState")
 
   @@map("state_snapshots")
 }
@@ -42,6 +44,8 @@ model ExecutionNode {
   agent       Agent           @relation(fields: [agentId], references: [agentId])
   snapshot    StateSnapshot   @relation(fields: [stateHash], references: [stateHash])
   branchSteps BranchStepMap[]
+  ioLogs    InterceptedIo[]
+  guardrail AstVfsGuardrail?
 
   @@index([stateHash])
   @@map("execution_nodes")
@@ -74,4 +78,61 @@ model BranchStepMap {
   @@id([branchId, lamportTick])
   @@index([nodeId])
   @@map("branch_step_map")
+}
+
+model InterceptedIo {
+  nodeId     String @map("node_id")
+  ioSeqNo    Int    @map("io_seq_no")
+  ioType     String @map("io_type")
+  reqPayload Json   @map("req_payload")
+  resPayload Json?  @map("res_payload")
+
+  node ExecutionNode @relation(fields: [nodeId], references: [nodeId])
+
+  @@id([nodeId, ioSeqNo])
+  @@map("intercepted_io")
+}
+
+model AstVfsGuardrail {
+  guardrailId       String   @id @default(uuid()) @map("guardrail_id")
+  nodeId            String   @unique @map("node_id")
+  filesCreatedDelta Int      @default(0) @map("files_created_delta")
+  maxAllowedFiles   Int      @default(0) @map("max_allowed_files")
+  netLocDelta       Int      @default(0) @map("net_loc_delta")
+  deadAstNodes      Int      @default(0) @map("dead_ast_nodes")
+  gatePassed        Boolean  @map("gate_passed")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  node ExecutionNode @relation(fields: [nodeId], references: [nodeId])
+
+  @@map("ast_vfs_guardrails")
+}
+
+model StateDiff {
+  diffId               String   @id @default(uuid()) @map("diff_id")
+  leftStateHash        String   @map("left_state_hash") @db.Char(64)
+  rightStateHash       String   @map("right_state_hash") @db.Char(64)
+  vectorCosineDistance Float    @map("vector_cosine_distance")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  left    StateSnapshot @relation("LeftState", fields: [leftStateHash], references: [stateHash])
+  right   StateSnapshot @relation("RightState", fields: [rightStateHash], references: [stateHash])
+  patches DiffPatch[]
+
+  @@unique([leftStateHash, rightStateHash])
+  @@map("state_diffs")
+}
+
+model DiffPatch {
+  diffId   String @map("diff_id")
+  patchIdx Int    @map("patch_idx")
+  op       String
+  path     String
+  oldValue Json?  @map("old_value")
+  newValue Json?  @map("new_value")
+
+  diff StateDiff @relation(fields: [diffId], references: [diffId])
+
+  @@id([diffId, patchIdx])
+  @@map("diff_patches")
 }
