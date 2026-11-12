@@ -48,11 +48,13 @@ model ExecutionNode {
   guardrail AstVfsGuardrail?
 
   @@index([stateHash])
+  @@index([agentId])  
   @@map("execution_nodes")
 }
 
 model Branch {
   branchId        String   @id @default(uuid()) @map("branch_id")
+  name            String?    
   parentBranchId  String?  @map("parent_branch_id")
   forkLamportTick Int?     @map("fork_lamport_tick")
   lockedPrngSeed  BigInt   @map("locked_prng_seed")
